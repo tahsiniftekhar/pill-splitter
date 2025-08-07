@@ -26,6 +26,121 @@ function App() {
     };
   }, []);
 
+  const splitPillsAtCursor = useCallback(() => {
+    setPills((prevPills) => {
+      const newPills: Pill[] = [];
+
+      prevPills.forEach((pill) => {
+        const intersectsVertical =
+          pill.x < cursor.x && cursor.x < pill.x + pill.width;
+        const intersectsHorizontal =
+          pill.y < cursor.y && cursor.y < pill.y + pill.height;
+
+        if (intersectsVertical && intersectsHorizontal) {
+          const leftWidth = cursor.x - pill.x;
+          const rightWidth = pill.x + pill.width - cursor.x;
+          const topHeight = cursor.y - pill.y;
+          const bottomHeight = pill.y + pill.height - cursor.y;
+
+          const canSplitVertical = leftWidth >= 20 && rightWidth >= 20;
+          const canSplitHorizontal = topHeight >= 20 && bottomHeight >= 20;
+
+          if (canSplitVertical && canSplitHorizontal) {
+            newPills.push(
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                x: pill.x,
+                y: pill.y,
+                width: leftWidth,
+                height: topHeight,
+              },
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                x: cursor.x,
+                y: pill.y,
+                width: rightWidth,
+                height: topHeight,
+              },
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                x: pill.x,
+                y: cursor.y,
+                width: leftWidth,
+                height: bottomHeight,
+              },
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                x: cursor.x,
+                y: cursor.y,
+                width: rightWidth,
+                height: bottomHeight,
+              }
+            );
+          } else {
+            newPills.push({ ...pill, x: pill.x + 10, y: pill.y + 10 });
+          }
+
+          return;
+        }
+
+        if (intersectsVertical) {
+          const leftWidth = cursor.x - pill.x;
+          const rightWidth = pill.x + pill.width - cursor.x;
+
+          if (leftWidth >= 20 && rightWidth >= 20) {
+            newPills.push(
+              { ...pill, id: crypto.randomUUID(), x: pill.x, width: leftWidth },
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                x: cursor.x,
+                width: rightWidth,
+              }
+            );
+          } else {
+            newPills.push({ ...pill, x: pill.x + 10 });
+          }
+
+          return;
+        }
+
+        if (intersectsHorizontal) {
+          const topHeight = cursor.y - pill.y;
+          const bottomHeight = pill.y + pill.height - cursor.y;
+
+          if (topHeight >= 20 && bottomHeight >= 20) {
+            newPills.push(
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                y: pill.y,
+                height: topHeight,
+              },
+              {
+                ...pill,
+                id: crypto.randomUUID(),
+                y: cursor.y,
+                height: bottomHeight,
+              }
+            );
+          } else {
+            newPills.push({ ...pill, y: pill.y + 10 });
+          }
+
+          return;
+        }
+
+        newPills.push(pill);
+      });
+
+      return newPills;
+    });
+  }, [cursor.x, cursor.y]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setStartPos({ x: e.clientX, y: e.clientY });
     setIsDragging(true);
@@ -35,31 +150,39 @@ function App() {
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
       if (!isDragging) return;
-      setIsDragging(false);
-
       const endX = e.clientX;
       const endY = e.clientY;
 
-      const x = Math.min(startPos.x, endX);
-      const y = Math.min(startPos.y, endY);
-      const width = Math.abs(endX - startPos.x);
-      const height = Math.abs(endY - startPos.y);
+      const dx = Math.abs(endX - startPos.x);
+      const dy = Math.abs(endY - startPos.y);
 
-      if (width >= 40 && height >= 40) {
-        const newPill = {
-          id: crypto.randomUUID(),
-          x,
-          y,
-          width,
-          height,
-          color: previewColor,
-        };
-        setPills((prev) => [...prev, newPill]);
+      setIsDragging(false);
+
+      if (dx > 5 || dy > 5) {
+        const x = Math.min(startPos.x, endX);
+        const y = Math.min(startPos.y, endY);
+        const width = dx;
+        const height = dy;
+
+        if (width >= 40 && height >= 40) {
+          const newPill = {
+            id: crypto.randomUUID(),
+            x,
+            y,
+            width,
+            height,
+            color: previewColor,
+          };
+          setPills((prev) => [...prev, newPill]);
+        }
+
+        setPreviewColor("");
+        return;
       }
 
-      setPreviewColor("");
+      splitPillsAtCursor();
     },
-    [isDragging, startPos.x, startPos.y, previewColor]
+    [isDragging, startPos, previewColor, splitPillsAtCursor]
   );
 
   const previewPillStyle = useMemo(() => {
