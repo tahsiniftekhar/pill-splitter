@@ -17,6 +17,23 @@ interface Pill {
 
 const MIN_PART_SIZE = 20;
 
+function getBorderRadius(
+  original: Pill["borderRadius"],
+  keepCorners: {
+    topLeft?: boolean;
+    topRight?: boolean;
+    bottomRight?: boolean;
+    bottomLeft?: boolean;
+  }
+): Pill["borderRadius"] {
+  return {
+    topLeft: keepCorners.topLeft ? original.topLeft : 0,
+    topRight: keepCorners.topRight ? original.topRight : 0,
+    bottomRight: keepCorners.bottomRight ? original.bottomRight : 0,
+    bottomLeft: keepCorners.bottomLeft ? original.bottomLeft : 0,
+  };
+}
+
 function App() {
   const [cursor, setCursor] = useState<{ x: number; y: number }>({
     x: 0,
@@ -55,182 +72,109 @@ function App() {
   const splitPillsAtCursor = useCallback(() => {
     setPills((prevPills) => {
       const newPills: Pill[] = [];
-  
+
+      const canSplitPart = (w: number, h: number) =>
+        w >= MIN_PART_SIZE && h >= MIN_PART_SIZE;
+
       prevPills.forEach((pill) => {
         const { x, y, width, height, color, borderRadius } = pill;
-  
+
         const intersectsVertical = cursor.x > x && cursor.x < x + width;
         const intersectsHorizontal = cursor.y > y && cursor.y < y + height;
-  
+
         if (!intersectsVertical && !intersectsHorizontal) {
           newPills.push(pill);
           return;
         }
-  
-        const canSplitPart = (w: number, h: number) =>
-          w >= MIN_PART_SIZE && h >= MIN_PART_SIZE;
-  
+
+        function createPart(
+          partX: number,
+          partY: number,
+          partWidth: number,
+          partHeight: number,
+          cornersToKeep: {
+            topLeft?: boolean;
+            topRight?: boolean;
+            bottomRight?: boolean;
+            bottomLeft?: boolean;
+          }
+        ) {
+          if (!canSplitPart(partWidth, partHeight)) return null;
+
+          return {
+            id: crypto.randomUUID(),
+            x: partX,
+            y: partY,
+            width: partWidth,
+            height: partHeight,
+            color,
+            borderRadius: getBorderRadius(borderRadius, cornersToKeep),
+          };
+        }
+
         if (intersectsVertical && intersectsHorizontal) {
-          const wLeft = cursor.x - x;
-          const wRight = x + width - cursor.x;
-          const hTop = cursor.y - y;
-          const hBottom = y + height - cursor.y;
-  
-          if (
-            canSplitPart(wLeft, hTop) &&
-            canSplitPart(wRight, hTop) &&
-            canSplitPart(wLeft, hBottom) &&
-            canSplitPart(wRight, hBottom)
-          ) {
-            newPills.push(
-              {
-                id: crypto.randomUUID(),
-                x,
-                y,
-                width: wLeft,
-                height: hTop,
-                color,
-                borderRadius: {
-                  topLeft: borderRadius.topLeft,
-                  topRight: 0,
-                  bottomRight: 0,
-                  bottomLeft: 0,
-                },
-              },
-              {
-                id: crypto.randomUUID(),
-                x: cursor.x,
-                y,
-                width: wRight,
-                height: hTop,
-                color,
-                borderRadius: {
-                  topLeft: 0,
-                  topRight: borderRadius.topRight,
-                  bottomRight: 0,
-                  bottomLeft: 0,
-                },
-              },
-              {
-                id: crypto.randomUUID(),
-                x,
-                y: cursor.y,
-                width: wLeft,
-                height: hBottom,
-                color,
-                borderRadius: {
-                  topLeft: 0,
-                  topRight: 0,
-                  bottomRight: 0,
-                  bottomLeft: borderRadius.bottomLeft,
-                },
-              },
-              {
-                id: crypto.randomUUID(),
-                x: cursor.x,
-                y: cursor.y,
-                width: wRight,
-                height: hBottom,
-                color,
-                borderRadius: {
-                  topLeft: 0,
-                  topRight: 0,
-                  bottomRight: borderRadius.bottomRight,
-                  bottomLeft: 0,
-                },
-              }
-            );
+          const parts = [
+            createPart(x, y, cursor.x - x, cursor.y - y, { topLeft: true }),
+            createPart(cursor.x, y, x + width - cursor.x, cursor.y - y, {
+              topRight: true,
+            }),
+            createPart(x, cursor.y, cursor.x - x, y + height - cursor.y, {
+              bottomLeft: true,
+            }),
+            createPart(
+              cursor.x,
+              cursor.y,
+              x + width - cursor.x,
+              y + height - cursor.y,
+              { bottomRight: true }
+            ),
+          ].filter(Boolean);
+
+          if (parts.length === 4) {
+            newPills.push(...(parts as Pill[]));
           } else {
             newPills.push(pill);
           }
         } else if (intersectsVertical) {
-          const leftWidth = cursor.x - x;
-          const rightWidth = x + width - cursor.x;
-  
-          if (
-            canSplitPart(leftWidth, height) &&
-            canSplitPart(rightWidth, height)
-          ) {
-            newPills.push(
-              {
-                id: crypto.randomUUID(),
-                x,
-                y,
-                width: leftWidth,
-                height,
-                color,
-                borderRadius: {
-                  topLeft: borderRadius.topLeft,
-                  topRight: 0,
-                  bottomRight: 0,
-                  bottomLeft: borderRadius.bottomLeft,
-                },
-              },
-              {
-                id: crypto.randomUUID(),
-                x: cursor.x,
-                y,
-                width: rightWidth,
-                height,
-                color,
-                borderRadius: {
-                  topLeft: 0,
-                  topRight: borderRadius.topRight,
-                  bottomRight: borderRadius.bottomRight,
-                  bottomLeft: 0,
-                },
-              }
-            );
+          const parts = [
+            createPart(x, y, cursor.x - x, height, {
+              topLeft: true,
+              bottomLeft: true,
+            }),
+            createPart(cursor.x, y, x + width - cursor.x, height, {
+              topRight: true,
+              bottomRight: true,
+            }),
+          ].filter(Boolean);
+
+          if (parts.length === 2) {
+            newPills.push(...(parts as Pill[]));
           } else {
             newPills.push(pill);
           }
         } else if (intersectsHorizontal) {
-          const topHeight = cursor.y - y;
-          const bottomHeight = y + height - cursor.y;
-  
-          if (
-            canSplitPart(width, topHeight) &&
-            canSplitPart(width, bottomHeight)
-          ) {
-            newPills.push(
-              {
-                id: crypto.randomUUID(),
-                x,
-                y,
-                width,
-                height: topHeight,
-                color,
-                borderRadius: {
-                  topLeft: borderRadius.topLeft,
-                  topRight: borderRadius.topRight,
-                  bottomRight: 0,
-                  bottomLeft: 0,
-                },
-              },
-              {
-                id: crypto.randomUUID(),
-                x,
-                y: cursor.y,
-                width,
-                height: bottomHeight,
-                color,
-                borderRadius: {
-                  topLeft: 0,
-                  topRight: 0,
-                  bottomRight: borderRadius.bottomRight,
-                  bottomLeft: borderRadius.bottomLeft,
-                },
-              }
-            );
+          const parts = [
+            createPart(x, y, width, cursor.y - y, {
+              topLeft: true,
+              topRight: true,
+            }),
+            createPart(x, cursor.y, width, y + height - cursor.y, {
+              bottomLeft: true,
+              bottomRight: true,
+            }),
+          ].filter(Boolean);
+
+          if (parts.length === 2) {
+            newPills.push(...(parts as Pill[]));
           } else {
             newPills.push(pill);
           }
         }
       });
-  
+
       return newPills;
     });
-  }, [cursor.x, cursor.y]);  
+  }, [cursor.x, cursor.y]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setStartPos({ x: e.clientX, y: e.clientY });
