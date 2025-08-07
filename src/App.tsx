@@ -10,11 +10,29 @@ interface Pill {
 }
 
 function App() {
-  const [cursor, setCursor] = useState({ x: 0, y: 0 });
+  const [cursor, setCursor] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
   const [pills, setPills] = useState<Pill[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [previewColor, setPreviewColor] = useState("");
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [startPos, setStartPos] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [previewColor, setPreviewColor] = useState<string>("");
+  const [draggingPillId, setDraggingPillId] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+  const [mouseDownData, setMouseDownData] = useState<{
+    startX: number;
+    startY: number;
+    pillId: string;
+    pillX: number;
+    pillY: number;
+  } | null>(null);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -197,6 +215,79 @@ function App() {
     };
   }, [isDragging, startPos.x, startPos.y, cursor.x, cursor.y, previewColor]);
 
+  const startDragging = useCallback(
+    (pillId: string, offset: { x: number; y: number }) => {
+      setDraggingPillId(pillId);
+      setDragOffset(offset);
+    },
+    []
+  );
+
+  const handleDragMove = useCallback(
+    (e: MouseEvent) => {
+      if (!draggingPillId) return;
+      setPills((prev) =>
+        prev.map((pill) =>
+          pill.id === draggingPillId
+            ? {
+                ...pill,
+                x: e.clientX - dragOffset.x,
+                y: e.clientY - dragOffset.y,
+              }
+            : pill
+        )
+      );
+    },
+    [draggingPillId, dragOffset]
+  );
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (mouseDownData && !draggingPillId) {
+        const { startX, startY, pillId, pillX, pillY } = mouseDownData;
+        if (
+          Math.abs(e.clientX - startX) > 5 ||
+          Math.abs(e.clientY - startY) > 5
+        ) {
+          startDragging(pillId, { x: startX - pillX, y: startY - pillY });
+        }
+      }
+      handleDragMove(e);
+    };
+
+    const handleMouseUp = () => {
+      if (!draggingPillId && mouseDownData) {
+        splitPillsAtCursor();
+      }
+      setDraggingPillId(null);
+      setMouseDownData(null);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [
+    mouseDownData,
+    draggingPillId,
+    handleDragMove,
+    startDragging,
+    splitPillsAtCursor,
+  ]);
+
+  const handlePillMouseDown = useCallback((e: React.MouseEvent, pill: Pill) => {
+    e.stopPropagation();
+    setMouseDownData({
+      startX: e.clientX,
+      startY: e.clientY,
+      pillId: pill.id,
+      pillX: pill.x,
+      pillY: pill.y,
+    });
+  }, []);
+
   return (
     <section
       className="h-screen w-screen bg-blue-100 cursor-crosshair relative"
@@ -222,6 +313,7 @@ function App() {
             height: pill.height,
             backgroundColor: pill.color,
           }}
+          onMouseDown={(e) => handlePillMouseDown(e, pill)}
         />
       ))}
 
