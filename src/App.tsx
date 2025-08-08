@@ -16,6 +16,7 @@ interface Pill {
 }
 
 const MIN_PART_SIZE = 20;
+const NUDGE_AMOUNT = 10;
 
 function getBorderRadius(
   original: Pill["borderRadius"],
@@ -133,7 +134,11 @@ function App() {
           if (parts.length === 4) {
             newPills.push(...(parts as Pill[]));
           } else {
-            newPills.push(pill);
+            newPills.push({
+              ...pill,
+              x: pill.x + NUDGE_AMOUNT,
+              y: pill.y + NUDGE_AMOUNT,
+            });
           }
         } else if (intersectsVertical) {
           const parts = [
@@ -150,7 +155,10 @@ function App() {
           if (parts.length === 2) {
             newPills.push(...(parts as Pill[]));
           } else {
-            newPills.push(pill);
+            newPills.push({
+              ...pill,
+              x: pill.x + NUDGE_AMOUNT,
+            });
           }
         } else if (intersectsHorizontal) {
           const parts = [
@@ -167,7 +175,10 @@ function App() {
           if (parts.length === 2) {
             newPills.push(...(parts as Pill[]));
           } else {
-            newPills.push(pill);
+            newPills.push({
+              ...pill,
+              y: pill.y + NUDGE_AMOUNT,
+            });
           }
         }
       });
