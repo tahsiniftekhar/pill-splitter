@@ -1,69 +1,45 @@
-# React + TypeScript + Vite
+# Pill Splitter
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interactive canvas application for splitting and manipulating pill shapes with precise geometric calculations and drag-and-drop interactions.
 
-Currently, two official plugins are available:
+![alt text](<./public/pill-splitter.png>)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Technical Implementation Highlights
 
-## Expanding the ESLint configuration
+- **2D AABB Collision Detection**: Axis-aligned bounding box intersection tests to detect cursor-to-pill collisions for splitting operations
+- **Adaptive Border-Radius Preservation**: Smart corner-radius calculations that preserve appropriate rounded corners on split segments based on their position
+- **Dual-Mode Interaction Model**: Distinguishes between canvas interactions (draw/split) and pill interactions (drag) via event propagation control
+- **Canvas-Style Drawing**: Drag-to-create pills with real-time preview; click/drag to split at cursor position; drag pills to reposition
+- **Constraint-Based Validation**: Enforces minimum part size (20px) during splits, with automatic position adjustment fallback when constraints unmet
+- **Global Cursor Tracking**: Real-time crosshair overlay synchronized with mouse movement via global event listeners
+- **Strong Type Safety**: Fully typed Pill interface with spread operator immutability patterns using React hooks (useState, useCallback, useMemo)
+- **Build Tooling**: Vite 7 for fast dev server (HMR), TypeScript 5.8 for strict type checking, Tailwind CSS 4 for styling
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Development
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# Install dependencies
+npm install
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+# Start dev server with HMR
+npm run dev
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Type check and build
+npm run build
+
+# Lint code
+npm run lint
+
+# Preview production build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Project Structure
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── App.tsx          # Main application logic and canvas rendering
+├── main.tsx         # React entry point
+├── index.css        # Global styles
+└── vite-env.d.ts    # Vite environment types
 ```
